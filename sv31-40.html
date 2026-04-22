@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Kiểm Thử Toàn Diện SV 31-40</title>
+    <style>
+        :root { --primary: #1a73e8; --error: #d93025; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 550px; }
+        h1 { font-size: 1.4rem; color: #202124; text-align: center; margin-bottom: 25px; }
+        
+        /* Menu chọn SV */
+        .tab-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; }
+        .tab-btn { padding: 12px 5px; border: 1px solid #dadce0; background: white; cursor: pointer; border-radius: 6px; font-weight: bold; transition: 0.2s; font-size: 0.9rem; }
+        .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* Quy tắc hiển thị */
+        .rules { background: #e8f0fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85rem; line-height: 1.5; color: #1967d2; border-left: 5px solid var(--primary); }
+        
+        /* Form */
+        .form-content { display: none; }
+        .form-content.active { display: block; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-weight: 600; margin-bottom: 5px; color: #3c4043; font-size: 0.9rem; }
+        input { width: 100%; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        input:focus { outline: none; border: 2px solid var(--primary); padding: 11px; }
+        
+        .error-msg { color: var(--error); font-size: 0.8rem; margin-top: 5px; font-weight: 500; display: none; }
+        input.invalid { border-color: var(--error); background: #fce8e6; }
+
+        .submit-btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .submit-btn:hover { background: #1557b0; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Hệ Thống Đăng Ký Tài Khoản (SV 31 - 40)</h1>
+        
+        <div class="tab-grid" id="tabs"></div>
+
+        <div id="forms">
+            </div>
+    </div>
+
+<script>
+    const data = [
+        { id: 31, n: "Không dấu cách", e: "Bắt đầu 'user'", p: "Không kết thúc bằng '0'", w: "Không chứa '@'" },
+        { id: 32, n: "Ít nhất 2 từ", e: "Bắt đầu 'user'", p: "Bắt đầu '09'", w: "Không số liên tiếp (vd: 123)" },
+        { id: 33, n: "Ít nhất 1 chữ hoa", e: "Ít nhất 15 ký tự", p: "Bắt đầu '09'", w: "Không số liên tiếp" },
+        { id: 34, n: "Không dấu cách", e: "Chỉ '@' và '.' là ký tự đặc biệt", p: "Không lặp 3 số liên tiếp (vd: 111)", w: "Không chứa '@'" },
+        { id: 35, n: "Không ký tự đặc biệt", e: "Ít nhất 15 ký tự", p: "Đúng 11 số", w: "Ít nhất 10 ký tự" },
+        { id: 36, n: "Tối đa 20 ký tự", e: "Chỉ '@' và '.' là ký tự đặc biệt", p: "Không kết thúc bằng '0'", w: "Ít nhất 2 chữ hoa" },
+        { id: 37, n: "Không ký tự đặc biệt", e: "Đúng 2 dấu chấm trước '@'", p: "Bắt đầu '09'", w: "Ít nhất 3 số" },
+        { id: 38, n: "Không dấu cách", e: "Chỉ '@' và '.' là ký tự đặc biệt", p: "Không lặp 3 số liên tiếp", w: "Ít nhất 2 chữ hoa" },
+        { id: 39, n: "Tối đa 20 ký tự", e: "Không chứa số", p: "Không kết thúc bằng '0'", w: "Không số liên tiếp" },
+        { id: 40, n: "Tối đa 20 ký tự", e: "Chỉ '@' và '.' là ký tự đặc biệt", p: "Chỉ chứa số chẵn", w: "Không chứa '@'" }
+    ];
+
+    // Các hàm xử lý logic kiểm tra
+    const isConsecutive = (val) => /(012|123|234|345|456|567|678|789)/.test(val);
+    const isTripleRepeat = (val) => /(\d)\1\1/.test(val);
+    const hasSpecialExceptEmail = (val) => /[^a-zA-Z0-9@.]/.test(val);
+    const hasSpecial = (val) => /[^a-zA-Z0-9\sàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/.test(val);
+
+    const tabsDiv = document.getElementById('tabs');
+    const formsDiv = document.getElementById('forms');
+
+    data.forEach((sv, index) => {
+        // Tạo nút Tab
+        const btn = document.createElement('button');
+        btn.className = `tab-btn ${index === 0 ? 'active' : ''}`;
+        btn.innerText = `SV ${sv.id}`;
+        btn.onclick = () => showTab(sv.id, btn);
+        tabsDiv.appendChild(btn);
+
+        // Tạo Form nội dung
+        const div = document.createElement('div');
+        div.className = `form-content ${index === 0 ? 'active' : ''}`;
+        div.id = `sv-${sv.id}`;
+        div.innerHTML = `
+            <div class="rules">
+                <strong>Yêu cầu SV ${sv.id}:</strong><br>
+                - Tên: ${sv.n}<br>- Email: ${sv.e}<br>
+                - SĐT: ${sv.p}<br>- MK: ${sv.w}
+            </div>
+            <form onsubmit="validate(event, ${sv.id})">
+                <div class="input-group">
+                    <label>Họ Tên</label>
+                    <input type="text" id="name-${sv.id}" required>
+                    <div class="error-msg" id="err-name-${sv.id}"></div>
+                </div>
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="text" id="email-${sv.id}" required>
+                    <div class="error-msg" id="err-email-${sv.id}"></div>
+                </div>
+                <div class="input-group">
+                    <label>Số Điện Thoại</label>
+                    <input type="text" id="phone-${sv.id}" required>
+                    <div class="error-msg" id="err-phone-${sv.id}"></div>
+                </div>
+                <div class="input-group">
+                    <label>Mật Khẩu</label>
+                    <input type="password" id="pass-${sv.id}" required>
+                    <div class="error-msg" id="err-pass-${sv.id}"></div>
+                </div>
+                <button type="submit" class="submit-btn">Đăng Ký SV ${sv.id}</button>
+            </form>
+        `;
+        formsDiv.appendChild(div);
+    });
+
+    function showTab(id, btn) {
+        document.querySelectorAll('.tab-btn, .form-content').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`sv-${id}`).classList.add('active');
+    }
+
+    function validate(e, id) {
+        e.preventDefault();
+        const name = document.getElementById(`name-${id}`);
+        const email = document.getElementById(`email-${id}`);
+        const phone = document.getElementById(`phone-${id}`);
+        const pass = document.getElementById(`pass-${id}`);
+        
+        let valid = true;
+
+        // Hàm hiện lỗi
+        const error = (input, msg) => {
+            input.classList.add('invalid');
+            const errDiv = document.getElementById(`err-${input.id}`);
+            errDiv.innerText = msg;
+            errDiv.style.display = 'block';
+            valid = false;
+        };
+
+        // Reset lỗi cũ
+        [name, email, phone, pass].forEach(i => {
+            i.classList.remove('invalid');
+            document.getElementById(`err-${i.id}`).style.display = 'none';
+        });
+
+        // LOGIC KIỂM TRA THEO TỪNG ID
+        const nV = name.value.trim();
+        const eV = email.value.trim();
+        const pV = phone.value.trim();
+        const wV = pass.value;
+
+        // 1. Kiểm tra Tên
+        if ([31, 34, 38].includes(id) && name.value.includes(' ')) error(name, "Họ tên không được chứa dấu cách.");
+        if ([32].includes(id) && nV.split(/\s+/).length < 2) error(name, "Phải có ít nhất 2 từ.");
+        if ([33].includes(id) && !/[A-Z]/.test(nV)) error(name, "Phải có ít nhất 1 chữ hoa.");
+        if ([35, 37].includes(id) && hasSpecial(nV)) error(name, "Không được chứa ký tự đặc biệt.");
+        if ([36, 39, 40].includes(id) && nV.length > 20) error(name, "Tối đa 20 ký tự.");
+
+        // 2. Kiểm tra Email
+        if ([31, 32].includes(id) && !eV.startsWith('user')) error(email, "Phải bắt đầu bằng 'user'.");
+        if ([33, 35].includes(id) && eV.length < 15) error(email, "Phải có ít nhất 15 ký tự.");
+        if ([34, 36, 38, 40].includes(id) && hasSpecialExceptEmail(eV)) error(email, "Chỉ được dùng '@' và '.'.");
+        if ([37].includes(id)) {
+            const beforeAt = eV.split('@')[0] || "";
+            if ((beforeAt.match(/\./g) || []).length !== 2) error(email, "Phải có đúng 2 dấu chấm trước '@'.");
+        }
+        if ([39].includes(id) && /[0-9]/.test(eV)) error(email, "Email không được chứa số.");
+
+        // 3. Kiểm tra Số Điện Thoại
+        if ([31, 36, 39].includes(id) && pV.endsWith('0')) error(phone, "Không được kết thúc bằng số 0.");
+        if ([32, 33, 37].includes(id) && !pV.startsWith('09')) error(phone, "Phải bắt đầu bằng '09'.");
+        if ([34, 38, 39].includes(id) && isTripleRepeat(pV)) error(phone, "Không được lặp 3 số liên tiếp (vd: 111).");
+        if ([35].includes(id) && !/^\d{11}$/.test(pV)) error(phone, "Phải có đúng 11 số.");
+        if ([40].includes(id) && !/^[02468]+$/.test(pV)) error(phone, "Chỉ được chứa số chẵn.");
+
+        // 4. Kiểm tra Mật Khẩu
+        if ([31, 34, 40].includes(id) && wV.includes('@')) error(pass, "Mật khẩu không được chứa '@'.");
+        if ([32, 33, 39].includes(id) && isConsecutive(wV)) error(pass, "Không được chứa số liên tiếp (123, 456...).");
+        if ([35].includes(id) && wV.length < 10) error(pass, "Phải có ít nhất 10 ký tự.");
+        if ([36, 38].includes(id) && (wV.match(/[A-Z]/g) || []).length < 2) error(pass, "Phải có ít nhất 2 chữ hoa.");
+        if ([37].includes(id) && (wV.match(/[0-9]/g) || []).length < 3) error(pass, "Phải có ít nhất 3 số.");
+
+        if(valid) alert("✅ Đăng ký thành công cho SV " + id);
+    }
+</script>
+</body>
+</html>
